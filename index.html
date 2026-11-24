@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Scout Fenix</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icone/icona-180.png">
@@ -11,60 +11,66 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Scout">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
 <style>
-  :root { --ink:#111; --rosso:#d0021b; --blu:#1030d0; --linea:#222; --sfondo:#fff; --tenue:#f3f3f3; }
+  /* Tutto lo scout sta in uno schermo: le altezze seguono l'altezza visibile (dvh), il campo prende il resto. */
+  :root { --ink:#111; --rosso:#d0021b; --blu:#1030d0; --linea:#222; --sfondo:#fff;
+          --h: clamp(34px, 6.2dvh, 56px);      /* altezza dei tasti principali */
+          --hp: clamp(28px, 4.8dvh, 42px); }   /* altezza dei tasti rossi nel campo */
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { margin:0; background:var(--sfondo); color:var(--ink); font-family:system-ui, "Segoe UI", sans-serif; }
-  body { max-width:520px; margin:0 auto; padding:8px 10px 90px; user-select:none; }
+  html,body { margin:0; height:100%; background:var(--sfondo); color:var(--ink); font-family:system-ui, "Segoe UI", sans-serif; }
+  body { max-width:520px; margin:0 auto; height:100dvh; overflow:hidden; user-select:none; -webkit-user-select:none;
+         display:flex; flex-direction:column;
+         padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  body > * { flex:none; }
   button { font:inherit; color:inherit; background:#fff; border:2px solid var(--linea); border-radius:0; padding:0; cursor:pointer; touch-action:manipulation; }
   button:active, button.flash, .zona.flash { background:#ffe58a; }
   .zona { cursor:pointer; }
 
-  /* punteggio */
-  .tabellone { display:grid; grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr) auto; align-items:end; gap:0; }
-  .squadra { display:flex; flex-direction:column; }
-  .squadra .nome { font-weight:800; font-size:18px; text-align:center; }
-  .squadra.loc .nome { color:var(--rosso); } .squadra.osp .nome { color:var(--blu); }
-  .squadra .pm { display:grid; grid-template-columns:1fr 1fr; }
-  .squadra .pm button { width:42px; height:46px; font-size:26px; font-weight:700; }
-  .punti { height:46px; border:2px solid var(--linea); display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; letter-spacing:2px; }
-  .punti.loc { color:var(--rosso); border-right-width:1px; } .punti.osp { color:var(--blu); border-left-width:1px; }
+  /* set e punteggio */
   .riga-set { display:flex; justify-content:center; gap:6px; margin:0 0 2px; font-size:12px; color:#555; align-items:center; line-height:1; }
   .riga-set button { border-width:1px; padding:1px 8px; font-size:11px; }
-  .tabellone { margin-bottom:8px; }
-  .gap { height:46px; padding:0 5px; font-size:12px; font-weight:800; letter-spacing:1px; border-left-width:1px; border-right-width:1px; background:#f1f1f1; }
+  .tabellone { display:grid; grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr) auto; align-items:end; margin-bottom:4px; }
+  .squadra { display:flex; flex-direction:column; }
+  .squadra .nome { font-weight:800; font-size:15px; line-height:1.1; text-align:center; }
+  .squadra.loc .nome { color:var(--rosso); } .squadra.osp .nome { color:var(--blu); }
+  .squadra .pm { display:grid; grid-template-columns:1fr 1fr; }
+  .squadra .pm button { width:42px; height:var(--h); font-size:24px; font-weight:700; }
+  .punti { height:var(--h); border:2px solid var(--linea); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; letter-spacing:2px; }
+  .punti.loc { color:var(--rosso); border-right-width:1px; } .punti.osp { color:var(--blu); border-left-width:1px; }
+  .gap { height:var(--h); padding:0 5px; font-size:12px; font-weight:800; letter-spacing:1px; border-left-width:1px; border-right-width:1px; background:#f1f1f1; }
 
-  /* campo avversario: zone di battuta */
+  /* campo avversario: zone di battuta e posti d'attacco */
   .zone { display:grid; grid-template-columns:2fr 1fr 2fr 1fr 2fr; }
-  .zone button { height:56px; font-size:20px; font-weight:700; border-width:3px; }
+  .zone button { height:var(--h); font-size:20px; font-weight:700; border-width:3px; }
   .zone.blu button { color:var(--blu); }
-
-  .muro { width:100%; height:48px; font-size:22px; font-weight:800; letter-spacing:3px; }
-  .rete { height:12px; background:#000; border-radius:4px; margin:0 -4px; }
+  .muro { width:100%; height:calc(var(--h) * 0.8); font-size:20px; font-weight:800; letter-spacing:3px; }
+  .rete { height:8px; background:#000; border-radius:4px; margin:0 -4px; }
   .muro-noi { display:grid; grid-template-columns:1fr 70px; }
   .muro-noi .inf { color:var(--rosso); font-weight:700; font-size:16px; }
 
-  /* nostro campo */
-  .campo { border:2px solid var(--linea); border-top:0; }
-  .linea { display:grid; grid-template-columns:1fr 1fr 1fr; position:relative; }
+  /* nostro campo: prende tutto lo spazio che resta */
+  .campo { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; border:2px solid var(--linea); border-top:0; }
+  .linea { flex:1 1 0; min-height:0; display:grid; grid-template-columns:1fr 1fr 1fr; position:relative; }
+  .linea.dietro { flex-grow:1.15; }
   .linea.avanti { border-bottom:1.5px solid var(--linea); }
-  .zona { position:relative; min-height:150px; border-right:1.5px dashed var(--linea); padding:6px 4px; display:flex; flex-direction:column; align-items:center; }
+  .zona { position:relative; min-height:0; border-right:1.5px dashed var(--linea); padding:4px; display:flex; flex-direction:column; align-items:center; }
   .zona:last-child { border-right:0; }
-  .numero { font-size:42px; font-weight:600; margin:auto 0; pointer-events:none; }
+  .numero { font-size:clamp(26px, 5dvh, 42px); font-weight:600; margin:auto 0; pointer-events:none; }
   .tasti { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; }
-  .tasti button { height:42px; border-color:var(--rosso); color:var(--rosso); font-size:22px; font-weight:800; border-width:2px; }
+  .tasti button { height:var(--hp); border-color:var(--rosso); color:var(--rosso); font-size:20px; font-weight:800; border-width:2px; }
   .tasti .sotto { grid-column:2; }
-  .linea.dietro .zona { min-height:210px; }
-  .cucitura { position:absolute; top:50%; transform:translate(-50%,-50%); width:52px; height:52px; font-weight:700; font-size:16px; z-index:2; }
+  .cucitura { position:absolute; top:62%; transform:translate(-50%,-50%); width:var(--h); height:var(--h); font-weight:700; font-size:16px; z-index:2; }
   .cucitura.c56 { left:33.33%; } .cucitura.c61 { left:66.66%; }
 
   /* ricezione */
-  .ricezione { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:0; }
+  .ricezione { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
   .ricezione .gruppo { display:grid; grid-template-columns:1fr 1fr 1fr; }
-  .ricezione button { height:56px; font-size:26px; font-weight:700; }
+  .ricezione button { height:var(--h); font-size:24px; font-weight:700; }
 
-  /* registro (provvisorio) */
-  .registro { position:fixed; left:0; right:0; bottom:0; background:#fafafa; border-top:1px solid #ccc; padding:6px 10px; font-size:12px; }
+  /* registro in fondo, dentro lo schermo */
+  .registro { background:#fafafa; border-top:1px solid #ccc; margin:4px calc(-1 * max(8px, env(safe-area-inset-left))) 0;
+              padding:5px 10px max(5px, env(safe-area-inset-bottom)); font-size:12px; }
   .registro .dentro { max-width:520px; margin:0 auto; display:flex; gap:8px; align-items:center; }
   .registro .ultimo { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#333; }
   .registro button { border-width:1px; padding:6px 10px; font-size:12px; }
