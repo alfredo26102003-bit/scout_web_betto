@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Scout Fenix</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icone/icona-180.png">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scout">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root { --ink:#111; --rosso:#d0021b; --blu:#1030d0; --linea:#222; --sfondo:#fff; --tenue:#f3f3f3; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--sfondo); color:var(--ink); font-family:system-ui, "Segoe UI", sans-serif; }
+  body { max-width:520px; margin:0 auto; padding:8px 10px 90px; user-select:none; }
+  button { font:inherit; color:inherit; background:#fff; border:2px solid var(--linea); border-radius:0; padding:0; cursor:pointer; touch-action:manipulation; }
+  button:active, button.flash, .zona.flash { background:#ffe58a; }
+  .zona { cursor:pointer; }
+
+  /* punteggio */
+  .tabellone { display:grid; grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr) auto; align-items:end; gap:0; }
+  .squadra { display:flex; flex-direction:column; }
+  .squadra .nome { font-weight:800; font-size:18px; text-align:center; }
+  .squadra.loc .nome { color:var(--rosso); } .squadra.osp .nome { color:var(--blu); }
+  .squadra .pm { display:grid; grid-template-columns:1fr 1fr; }
+  .squadra .pm button { width:42px; height:46px; font-size:26px; font-weight:700; }
+  .punti { height:46px; border:2px solid var(--linea); display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; letter-spacing:2px; }
+  .punti.loc { color:var(--rosso); border-right-width:1px; } .punti.osp { color:var(--blu); border-left-width:1px; }
+  .riga-set { display:flex; justify-content:center; gap:6px; margin:0 0 2px; font-size:12px; color:#555; align-items:center; line-height:1; }
+  .riga-set button { border-width:1px; padding:1px 8px; font-size:11px; }
+  .tabellone { margin-bottom:8px; }
+  .gap { height:46px; padding:0 5px; font-size:12px; font-weight:800; letter-spacing:1px; border-left-width:1px; border-right-width:1px; background:#f1f1f1; }
+
+  /* campo avversario: zone di battuta */
+  .zone { display:grid; grid-template-columns:2fr 1fr 2fr 1fr 2fr; }
+  .zone button { height:56px; font-size:20px; font-weight:700; border-width:3px; }
+  .zone.blu button { color:var(--blu); }
+
+  .muro { width:100%; height:48px; font-size:22px; font-weight:800; letter-spacing:3px; }
+  .rete { height:12px; background:#000; border-radius:4px; margin:0 -4px; }
+  .muro-noi { display:grid; grid-template-columns:1fr 70px; }
+  .muro-noi .inf { color:var(--rosso); font-weight:700; font-size:16px; }
+
+  /* nostro campo */
+  .campo { border:2px solid var(--linea); border-top:0; }
+  .linea { display:grid; grid-template-columns:1fr 1fr 1fr; position:relative; }
+  .linea.avanti { border-bottom:1.5px solid var(--linea); }
+  .zona { position:relative; min-height:150px; border-right:1.5px dashed var(--linea); padding:6px 4px; display:flex; flex-direction:column; align-items:center; }
+  .zona:last-child { border-right:0; }
+  .numero { font-size:42px; font-weight:600; margin:auto 0; pointer-events:none; }
+  .tasti { display:grid; grid-template-columns:repeat(3, 1fr); width:100%; }
+  .tasti button { height:42px; border-color:var(--rosso); color:var(--rosso); font-size:22px; font-weight:800; border-width:2px; }
+  .tasti .sotto { grid-column:2; }
+  .linea.dietro .zona { min-height:210px; }
+  .cucitura { position:absolute; top:50%; transform:translate(-50%,-50%); width:52px; height:52px; font-weight:700; font-size:16px; z-index:2; }
+  .cucitura.c56 { left:33.33%; } .cucitura.c61 { left:66.66%; }
+
+  /* ricezione */
+  .ricezione { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:0; }
+  .ricezione .gruppo { display:grid; grid-template-columns:1fr 1fr 1fr; }
+  .ricezione button { height:56px; font-size:26px; font-weight:700; }
+
+  /* registro (provvisorio) */
+  .registro { position:fixed; left:0; right:0; bottom:0; background:#fafafa; border-top:1px solid #ccc; padding:6px 10px; font-size:12px; }
+  .registro .dentro { max-width:520px; margin:0 auto; display:flex; gap:8px; align-items:center; }
+  .registro .ultimo { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#333; }
+  .registro button { border-width:1px; padding:6px 10px; font-size:12px; }
+  .avviso { display:none; position:fixed; top:0; left:0; right:0; z-index:10; background:#d0021b; color:#fff;
+            font-weight:700; font-size:14px; text-align:center; padding:8px; }
+  .avviso.on { display:block; }
+  #precedente { display:none; }
+</style>
+</head>
+<body>
+
+<!-- set, sopra il punteggio -->
+<div class="riga-set"><button id="setmeno">◀</button><span id="set">Set 1</span><button id="setpiu">▶</button></div>
+<!-- punteggio -->
+<div class="tabellone">
+  <div class="squadra loc"><div class="nome">Locali</div>
+    <div class="pm"><button data-k="punteggio" data-v="locali +">+</button><button data-k="punteggio" data-v="locali -">−</button></div></div>
+  <div class="punti loc" id="pl">00</div>
+  <button class="gap" data-k="gap" data-v="gap">GAP</button>
+  <div class="punti osp" id="po">00</div>
+  <div class="squadra osp"><div class="nome">Ospiti</div>
+    <div class="pm"><button data-k="punteggio" data-v="ospiti +">+</button><button data-k="punteggio" data-v="ospiti -">−</button></div></div>
+</div>
+
+<!-- campo avversario -->
+<div class="zone">
+  <button data-k="zona nera" data-v="1">1</button><button data-k="zona nera" data-v="16">16</button>
+  <button data-k="zona nera" data-v="6">6</button><button data-k="zona nera" data-v="65">65</button>
+  <button data-k="zona nera" data-v="5">5</button>
+</div>
+<div class="zone blu">
+  <button data-k="zona blu" data-v="2">2</button><button data-k="zona blu" data-v="1">1</button>
+  <button data-k="zona blu" data-v="3">3</button><button data-k="zona blu" data-v="6">6</button>
+  <button data-k="zona blu" data-v="4">4</button>
+</div>
+<button class="muro" data-k="muro loro" data-v="muro">MURO</button>
+<div class="rete"></div>
+<div class="muro-noi">
+  <button class="muro" data-k="muro nostro" data-v="muro">MURO</button>
+  <button class="inf" data-k="infilata" data-v="inf">Inf ↑</button>
+</div>
+
+<!-- nostro campo -->
+<div class="campo">
+  <div class="linea avanti">
+    <div class="zona" data-k="zona difesa" data-v="4"><div class="tasti">
+        <button data-k="zona 4" data-v="↑">↑</button><button data-k="zona 4" data-v="↗">↗</button><button data-k="zona 4" data-v="M">M</button></div>
+      <span class="numero">4</span></div>
+    <div class="zona" data-k="zona difesa" data-v="3"><div class="tasti">
+        <button data-k="zona 3" data-v="↖">↖</button><button data-k="zona 3" data-v="↑">↑</button><button data-k="zona 3" data-v="↗">↗</button>
+        <button class="sotto" data-k="zona 3" data-v="M">M</button></div>
+      <span class="numero">3</span></div>
+    <div class="zona" data-k="zona difesa" data-v="2"><div class="tasti">
+        <button data-k="zona 2" data-v="M">M</button><button data-k="zona 2" data-v="↖">↖</button><button data-k="zona 2" data-v="↑">↑</button></div>
+      <span class="numero">2</span></div>
+  </div>
+  <div class="linea dietro">
+    <div class="zona" data-k="zona difesa" data-v="5"><span class="numero">5</span></div>
+    <div class="zona" data-k="zona difesa" data-v="6"><div class="tasti">
+        <button data-k="zona 6" data-v="↖">↖</button><button data-k="zona 6" data-v="↑">↑</button><button data-k="zona 6" data-v="↗">↗</button>
+        <button class="sotto" data-k="zona 6" data-v="M">M</button></div>
+      <span class="numero">6</span></div>
+    <div class="zona" data-k="zona difesa" data-v="1"><div class="tasti">
+        <button data-k="zona 1" data-v="M">M</button><button data-k="zona 1" data-v="↖">↖</button><button data-k="zona 1" data-v="↑">↑</button></div>
+      <span class="numero">1</span></div>
+    <button class="cucitura c56" data-k="zona difesa" data-v="56">56</button>
+    <button class="cucitura c61" data-k="zona difesa" data-v="61">61</button>
+  </div>
+</div>
+
+<!-- ricezione: sinistra, centro, destra -->
+<div class="ricezione">
+  <div class="gruppo"><button data-k="ric. sinistra" data-v="+">+</button><button data-k="ric. sinistra" data-v="-">−</button><button data-k="ric. sinistra" data-v="/">/</button></div>
+  <div class="gruppo"><button data-k="ric. centro" data-v="+">+</button><button data-k="ric. centro" data-v="-">−</button><button data-k="ric. centro" data-v="/">/</button></div>
+  <div class="gruppo"><button data-k="ric. destra" data-v="+">+</button><button data-k="ric. destra" data-v="-">−</button><button data-k="ric. destra" data-v="/">/</button></div>
+</div>
+
+<div class="avviso" id="avviso">ATTENZIONE: il telefono non sta salvando i tocchi. Esporta il CSV adesso.</div>
+
+<!-- registro: ultimo tocco, annulla, esporta, nuova partita -->
+<div class="registro"><div class="dentro">
+  <span class="ultimo" id="ultimo">Nessun tocco registrato</span>
+  <button id="annulla">Annulla</button>
+  <button id="esporta">CSV</button>
+  <button id="precedente">Partita prima</button>
+  <button id="nuova">Nuova</button>
+</div></div>
+
+<script>
+const CHIAVE = 'scout_fenix_v1';
+const COPIA_SET = CHIAVE + '_copia_set';        // copia di sicurezza presa a ogni cambio set
+const PRECEDENTE = CHIAVE + '_partita_prima';   // la partita salvata prima di premere "Nuova"
+let stato = { set: 1, loc: 0, osp: 0, log: [] };
+try { const s = JSON.parse(localStorage.getItem(CHIAVE)); if (s && Array.isArray(s.log)) stato = s; } catch (e) {}
+const leggiChiave = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+function scrivi(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+}
+const salva = () => document.getElementById('avviso').classList.toggle('on', !scrivi(CHIAVE, stato));
+// chiede al telefono di non cancellare i dati di questa pagina
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+const due = n => String(n).padStart(2, '0');
+
+function disegna() {
+  document.getElementById('pl').textContent = due(stato.loc);
+  document.getElementById('po').textContent = due(stato.osp);
+  document.getElementById('set').textContent = 'Set ' + stato.set;
+  const u = stato.log[stato.log.length - 1];
+  document.getElementById('ultimo').textContent = u
+    ? `Set ${u.set} · ${u.loc}-${u.osp} · ${u.area}: ${u.tasto} · ${u.ora}` : 'Nessun tocco registrato';
+  const p = leggiChiave(PRECEDENTE);
+  document.getElementById('precedente').style.display = !stato.log.length && p && p.log && p.log.length ? 'inline-block' : 'none';
+}
+
+function registra(area, tasto) {
+  // ogni tocco porta il punteggio PRIMA dell'eventuale cambio: è la chiave per agganciarlo a eScore
+  stato.log.push({ set: stato.set, loc: stato.loc, osp: stato.osp, area, tasto,
+                   ora: new Date().toLocaleTimeString('it-IT') });
+}
+
+document.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', e => {
+  if (b.classList.contains('zona') && e.target.closest('button')) return;   // i tasti dentro la zona fanno da sé
+  const area = b.dataset.k, tasto = b.dataset.v;
+  registra(area, tasto);
+  if (area === 'punteggio') {
+    const [chi, seg] = tasto.split(' ');
+    const k = chi === 'locali' ? 'loc' : 'osp';
+    stato[k] = Math.max(0, stato[k] + (seg === '+' ? 1 : -1));
+  }
+  b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 150);
+  salva(); disegna();
+}));
+
+document.getElementById('setpiu').onclick = () => {
+  scrivi(COPIA_SET, { ...stato, quando: new Date().toISOString() });   // copia di sicurezza a fine set
+  stato.set = Math.min(5, stato.set + 1); stato.loc = stato.osp = 0; salva(); disegna();
+};
+document.getElementById('setmeno').onclick = () => { stato.set = Math.max(1, stato.set - 1); salva(); disegna(); };
+document.getElementById('annulla').onclick = () => {
+  const u = stato.log.pop();
+  if (u && u.area === 'punteggio') { stato.loc = u.loc; stato.osp = u.osp; }
+  salva(); disegna();
+};
+async function esporta(log) {
+  const righe = ['set;punteggio;area;tasto;ora',
+    ...log.map(r => `${r.set};${r.loc}-${r.osp};${r.area};${r.tasto};${r.ora}`)];
+  const d = new Date(), z = n => String(n).padStart(2, '0');
+  const nome = `scout_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.csv`;
+  const blob = new Blob(['\ufeff' + righe.join('\n')], { type: 'text/csv' });
+  // su iPhone l'app installata non scarica file: si usa "Condividi" (File, Mail, WhatsApp...)
+  try {
+    const f = new File([blob], nome, { type: 'text/csv' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: nome }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+}
+document.getElementById('esporta').onclick = () => esporta(stato.log);
+document.getElementById('precedente').onclick = () => { const p = leggiChiave(PRECEDENTE); if (p) esporta(p.log); };
+document.getElementById('nuova').onclick = () => {
+  if (!stato.log.length) return;
+  if (!confirm('Iniziare una nuova partita? Quella attuale resta esportabile da "Partita prima" finché non ne inizi un’altra.')) return;
+  scrivi(PRECEDENTE, stato);
+  stato = { set: 1, loc: 0, osp: 0, log: [] };
+  salva(); disegna();
+};
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname))) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+disegna();
+</script>
+</body>
+</html>
